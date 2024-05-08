@@ -1,0 +1,1 @@
+frontend will consume services from the gateway
