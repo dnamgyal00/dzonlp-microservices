@@ -4,6 +4,7 @@ import requests
 import logging
 import os
 import json
+import base64
 
 app = Flask(__name__)
 CORS(app)  # Enable CORS for all routes
@@ -38,7 +39,16 @@ def log_request(url, params=None, service=None):
         "service": service,
     }
 
-    if params is not None:
+    # Check if 'text' parameter exists and handle it
+    if params is not None and 'text' in params and service == "GET-dz_to_en" or params is not None and  'wylie_text' in params and service == "POST-tts":
+        params_copy = params.copy()
+        # dzongkha_text = params_copy['text']
+        dzongkha_text = params_copy.get('text', params_copy.get('wylie_text'))
+        if 'wylie_text' in params_copy:
+            params_copy.pop('wylie_text')
+        params_copy['text'] = base64.b64encode(dzongkha_text.encode()).decode('utf-8')
+        log_entry["params"] = params_copy
+    else:
         log_entry["params"] = params
 
     with open(LOG_FILE, 'r+') as f:
