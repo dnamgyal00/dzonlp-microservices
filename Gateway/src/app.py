@@ -28,24 +28,19 @@ def forward_request_to_microservice(url, data):
         logging.error(f"Error forwarding request to {url}: {str(e)}")
         return None
 
-
 def log_request(url, params=None, service=None):
     url = url.split(":")[2]
 
     # Log the request details to the log file
-    if params is None:
-        log_entry = {
-            "port": url,
-            "ip": request.remote_addr,
-            "service": service,
-        }
-    else:
-        log_entry = {
-            "port": url,
-            "ip": request.remote_addr,
-            "params": params,
-            "service": service,
-        }
+    log_entry = {
+        "port": url,
+        "ip": request.remote_addr,
+        "service": service,
+    }
+
+    if params is not None:
+        log_entry["params"] = params
+
     with open(LOG_FILE, 'r+') as f:
         logs = json.load(f)
         logs.append(log_entry)
@@ -53,14 +48,13 @@ def log_request(url, params=None, service=None):
         json.dump(logs, f, indent=4)
         f.truncate()
 
-
 @app.route('/nmt/dzo-to-eng')
 def service1():
     data = request.args.to_dict()
-    log_request(DZO_TO_ENG_URL, params=data, service="GET-dz_to_en")
     if not data:
         return jsonify({"error": "Missing data in request"}), 400
     result = forward_request_to_microservice(DZO_TO_ENG_URL, data)
+    log_request(DZO_TO_ENG_URL, params=data, service="GET-dz_to_en")
     if result is not None:
         return jsonify(result)
     else:
@@ -69,10 +63,10 @@ def service1():
 @app.route('/nmt/eng-to-dzo')
 def service2():
     data = request.args.to_dict()
-    log_request(ENG_TO_DZO_URL, params=data, service="GET-en_to_dz")
     if not data:
         return jsonify({"error": "Missing data in request"}), 400
     result = forward_request_to_microservice(ENG_TO_DZO_URL, data)
+    log_request(ENG_TO_DZO_URL, params=data, service="GET-en_to_dz")
     if result is not None:
         return jsonify(result)
     else:
@@ -82,7 +76,6 @@ def service2():
 def service3():
     try:
         data = request.json
-        log_request(TTS_URL, params=data, service="POST-tts")
         if not data or 'wylie_text' not in data:
             return jsonify({"error": "Missing 'wylie_text' field in request body"}), 400
             
@@ -91,6 +84,7 @@ def service3():
         tts_response = requests.post(TTS_URL, json={"wylie_text": wylie_text})
         tts_response.raise_for_status()  # Raise an exception for HTTP errors
         audio_data = tts_response.content
+        log_request(TTS_URL, params=data, service="POST-tts")
         return Response(audio_data, mimetype='audio/wav', content_type='audio/wav')
     except requests.RequestException as e:
         # Log the error and return an error response
@@ -105,7 +99,6 @@ def convert_audio():
             return jsonify({"error": "No audio file provided"}), 400
 
         audio_file = request.files['audio_file']
-        log_request(ASR_URL, service="POST-asr")
         
         # Ensure the file has a supported format (e.g., WAV)
         if audio_file.filename == '' or not audio_file.filename.endswith('.wav'):
@@ -117,6 +110,7 @@ def convert_audio():
         
         transcription = asr_response.json().get('transcription')
 
+        log_request(ASR_URL, service="POST-asr")
         return jsonify({"transcription": transcription}), 200
 
     except requests.exceptions.HTTPError as err:
