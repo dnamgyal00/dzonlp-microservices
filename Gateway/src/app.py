@@ -28,6 +28,7 @@ def forward_request_to_microservice(url, data):
         logging.error(f"Error forwarding request to {url}: {str(e)}")
         return None
 
+
 def log_request(url, params=None, service=None):
     url = url.split(":")[2]
 
@@ -39,7 +40,6 @@ def log_request(url, params=None, service=None):
             "service": service,
         }
     else:
-        print(params)
         log_entry = {
             "port": url,
             "ip": request.remote_addr,
@@ -52,6 +52,7 @@ def log_request(url, params=None, service=None):
         f.seek(0)
         json.dump(logs, f, indent=4)
         f.truncate()
+
 
 @app.route('/nmt/dzo-to-eng')
 def service1():
