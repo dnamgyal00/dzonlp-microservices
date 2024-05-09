@@ -55,7 +55,8 @@ def log_request(url, params=None, service=None):
         params_copy['text'] = base64.b64encode(dzongkha_text.encode()).decode('utf-8')
         log_entry["params"] = params_copy
     else:
-        log_entry["params"] = params
+        if params is not None:
+            log_entry["params"] = params
 
     with open(LOG_FILE, 'r+') as f:
         logs = json.load(f)
