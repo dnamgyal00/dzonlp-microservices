@@ -5,6 +5,7 @@ import logging
 import os
 import json
 import base64
+import datetime
 
 app = Flask(__name__)
 CORS(app)  # Enable CORS for all routes
@@ -29,11 +30,16 @@ def forward_request_to_microservice(url, data):
         logging.error(f"Error forwarding request to {url}: {str(e)}")
         return None
 
+
 def log_request(url, params=None, service=None):
     url = url.split(":")[2]
 
+    # Get current date and time
+    current_datetime = datetime.datetime.now().strftime("%d/%b/%Y %H:%M:%S")
+
     # Log the request details to the log file
     log_entry = {
+        "timestamp": current_datetime,
         "port": url,
         "ip": request.remote_addr,
         "service": service,
@@ -57,6 +63,7 @@ def log_request(url, params=None, service=None):
         f.seek(0)
         json.dump(logs, f, indent=4)
         f.truncate()
+
 
 @app.route('/nmt/dzo-to-eng')
 def service1():
