@@ -11,10 +11,17 @@ app = Flask(__name__)
 CORS(app)  # Enable CORS for all routes
 
 # Define the URLs for your microservices
-DZO_TO_ENG_URL = 'http://10.2.5.72:1213/translate'
+# DZO_TO_ENG_URL = 'http://10.2.5.72:1213/translate'
 ENG_TO_DZO_URL = 'http://10.2.5.72:1212/translate'
 TTS_URL = 'http://10.2.5.72:1214/convert'
 ASR_URL = 'http://10.2.5.72:1215/convert'
+
+DZO_TO_ENG_SERVICES = [
+    'http://10.2.5.72:1113/translate',
+    'http://10.2.5.72:1116/translate',
+    'http://10.2.5.72:1117/translate',
+    'http://10.2.5.72:1118/translate',
+]
 
 # Create or load the log file
 LOG_FILE = 'log.json'
@@ -66,17 +73,38 @@ def log_request(url, params=None, service=None):
         f.truncate()
 
 
+def choose_service():
+    # Simple round-robin load balancing
+    return DZO_TO_ENG_SERVICES.pop(0)
+
 @app.route('/nmt/dzo-to-eng')
 def service1():
     data = request.args.to_dict()
     if not data:
         return jsonify({"error": "Missing data in request"}), 400
-    result = forward_request_to_microservice(DZO_TO_ENG_URL, data)
-    log_request(DZO_TO_ENG_URL, params=data, service="GET-dz_to_en")
+    
+    service_url = choose_service()
+    result = forward_request_to_microservice(service_url, data)
+    
+    log_request(service_url, params=data, service="GET-dz_to_en")
+    
     if result is not None:
+        DZO_TO_ENG_SERVICES.append(service_url)  # Return the service URL to the list
         return jsonify(result)
     else:
-        return jsonify({"error": "Service1 error"}), 500
+        return jsonify({"error": "Service error"}), 500
+
+# @app.route('/nmt/dzo-to-eng')
+# def service1():
+#     data = request.args.to_dict()
+#     if not data:
+#         return jsonify({"error": "Missing data in request"}), 400
+#     result = forward_request_to_microservice(DZO_TO_ENG_URL, data)
+#     log_request(DZO_TO_ENG_URL, params=data, service="GET-dz_to_en")
+#     if result is not None:
+#         return jsonify(result)
+#     else:
+#         return jsonify({"error": "Service1 error"}), 500
 
 @app.route('/nmt/eng-to-dzo')
 def service2():
