@@ -6,6 +6,7 @@ import os
 import json
 import base64
 import datetime
+import queue
 
 app = Flask(__name__)
 CORS(app)  # Enable CORS for all routes
@@ -16,13 +17,20 @@ DZO_TO_ENG_URL = 'http://10.2.5.72:1213/translate'
 TTS_URL = 'http://10.2.5.72:1214/convert'
 ASR_URL = 'http://10.2.5.72:1215/convert'
 
-ENG_TO_DZO_SERVICES = [
+# ENG_TO_DZO_SERVICES = [
+#     'http://10.2.5.72:1212/translate',
+#     'http://10.2.5.72:1313/translate',
+#     'http://10.2.5.72:1414/translate',
+#     'http://10.2.5.72:1515/translate',
+# ]
+ENG_TO_DZO_SERVICES = queue.Queue()
+for service_url in [
     'http://10.2.5.72:1212/translate',
     'http://10.2.5.72:1313/translate',
     'http://10.2.5.72:1414/translate',
-    'http://10.2.5.72:1515/translate',
-]
-
+    'http://10.2.5.72:1515/translate'
+]:
+    ENG_TO_DZO_SERVICES.put(service_url)
 # Create or load the log file
 LOG_FILE = 'log.json'
 if not os.path.exists(LOG_FILE):
@@ -73,10 +81,15 @@ def log_request(url, params=None, service=None):
         f.truncate()
 
 
+# def choose_service():
+#     # Simple round-robin load balancing
+#     return ENG_TO_DZO_SERVICES.pop(0)
+
 def choose_service():
     # Simple round-robin load balancing
-    return ENG_TO_DZO_SERVICES.pop(0)
-
+    service_url = ENG_TO_DZO_SERVICES.get()
+    ENG_TO_DZO_SERVICES.put(service_url)  # Put the service URL back to the queue
+    return service_url
 
 
 @app.route('/nmt/dzo-to-eng')
@@ -106,7 +119,7 @@ def service1():
 #         return jsonify({"error": "Service2 error"}), 500
 
 @app.route('/nmt/eng-to-dzo')
-def service1():
+def service2():
     data = request.args.to_dict()
     if not data:
         return jsonify({"error": "Missing data in request"}), 400
@@ -117,7 +130,6 @@ def service1():
     log_request(service_url, params=data, service="GET-dz_to_en")
     
     if result is not None:
-        ENG_TO_DZO_SERVICES.append(service_url)  # Return the service URL to the list
         return jsonify(result)
     else:
         return jsonify({"error": "Service error"}), 500
