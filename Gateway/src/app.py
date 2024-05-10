@@ -11,16 +11,16 @@ app = Flask(__name__)
 CORS(app)  # Enable CORS for all routes
 
 # Define the URLs for your microservices
-# DZO_TO_ENG_URL = 'http://10.2.5.72:1213/translate'
-ENG_TO_DZO_URL = 'http://10.2.5.72:1212/translate'
+DZO_TO_ENG_URL = 'http://10.2.5.72:1213/translate'
+# ENG_TO_DZO_URL = 'http://10.2.5.72:1212/translate'
 TTS_URL = 'http://10.2.5.72:1214/convert'
 ASR_URL = 'http://10.2.5.72:1215/convert'
 
-DZO_TO_ENG_SERVICES = [
-    'http://10.2.5.72:1113/translate',
-    'http://10.2.5.72:1116/translate',
-    'http://10.2.5.72:1117/translate',
-    'http://10.2.5.72:1118/translate',
+ENG_TO_DZO_SERVICES = [
+    'http://10.2.5.72:1212/translate',
+    'http://10.2.5.72:1313/translate',
+    'http://10.2.5.72:1414/translate',
+    'http://10.2.5.72:1515/translate',
 ]
 
 # Create or load the log file
@@ -75,9 +75,37 @@ def log_request(url, params=None, service=None):
 
 def choose_service():
     # Simple round-robin load balancing
-    return DZO_TO_ENG_SERVICES.pop(0)
+    return ENG_TO_DZO_SERVICES.pop(0)
+
+
 
 @app.route('/nmt/dzo-to-eng')
+def service1():
+    data = request.args.to_dict()
+    if not data:
+        return jsonify({"error": "Missing data in request"}), 400
+    result = forward_request_to_microservice(DZO_TO_ENG_URL, data)
+    log_request(DZO_TO_ENG_URL, params=data, service="GET-dz_to_en")
+    if result is not None:
+        return jsonify(result)
+    else:
+        return jsonify({"error": "Service1 error"}), 500
+
+
+
+# @app.route('/nmt/eng-to-dzo')
+# def service2():
+#     data = request.args.to_dict()
+#     if not data:
+#         return jsonify({"error": "Missing data     in request"}), 400
+#     result = forward_request_to_microservice(ENG_TO_DZO_URL, data)
+#     log_request(ENG_TO_DZO_URL, params=data, service="GET-en_to_dz")
+#     if result is not None:
+#         return jsonify(result)
+#     else:
+#         return jsonify({"error": "Service2 error"}), 500
+
+@app.route('/nmt/eng-to-dzo')
 def service1():
     data = request.args.to_dict()
     if not data:
@@ -89,34 +117,10 @@ def service1():
     log_request(service_url, params=data, service="GET-dz_to_en")
     
     if result is not None:
-        DZO_TO_ENG_SERVICES.append(service_url)  # Return the service URL to the list
+        ENG_TO_DZO_SERVICES.append(service_url)  # Return the service URL to the list
         return jsonify(result)
     else:
         return jsonify({"error": "Service error"}), 500
-
-# @app.route('/nmt/dzo-to-eng')
-# def service1():
-#     data = request.args.to_dict()
-#     if not data:
-#         return jsonify({"error": "Missing data in request"}), 400
-#     result = forward_request_to_microservice(DZO_TO_ENG_URL, data)
-#     log_request(DZO_TO_ENG_URL, params=data, service="GET-dz_to_en")
-#     if result is not None:
-#         return jsonify(result)
-#     else:
-#         return jsonify({"error": "Service1 error"}), 500
-
-@app.route('/nmt/eng-to-dzo')
-def service2():
-    data = request.args.to_dict()
-    if not data:
-        return jsonify({"error": "Missing data in request"}), 400
-    result = forward_request_to_microservice(ENG_TO_DZO_URL, data)
-    log_request(ENG_TO_DZO_URL, params=data, service="GET-en_to_dz")
-    if result is not None:
-        return jsonify(result)
-    else:
-        return jsonify({"error": "Service2 error"}), 500
 
 @app.route('/tts', methods=['POST'])
 def service3():
