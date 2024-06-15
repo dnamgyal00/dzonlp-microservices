@@ -1,30 +1,20 @@
-# Use Ubuntu as the base image
-FROM ubuntu:20.04
+# Use the Python 3.10.12 Alpine image as the base
+FROM python:3.10.12-alpine
 
-# Update package lists and install necessary packages
-RUN apt-get update \
-    && apt-get install -y --no-install-recommends \
-        python3 \
-        python3-pip \
-        openjdk-8-jre-headless \
-        software-properties-common \
-        gnupg \
-    && apt-key adv --keyserver keyserver.ubuntu.com --recv-keys EEA14886 \
-    && add-apt-repository ppa:openjdk-r/ppa \
-    && apt-get update \
-    && apt-get install -y --no-install-recommends \
-        openjdk-8-jre-headless \
-    && apt-get clean \
-    && rm -rf /var/lib/apt/lists/*
-
-# Set working directory
+# Set the working directory inside the container
 WORKDIR /app
 
-# Install Python dependencies
-RUN pip install flask flask-cors pydub TTS
+# Copy the Python requirements file
+COPY requirements.txt .
 
-# Copy the TTS application files into the container
-COPY tts /app
+# Install the Python dependencies
+RUN pip install --no-cache-dir -r requirements.txt
 
-# Run the application
-CMD ["python3", "dzo_tts.py"]
+# Copy the Flask application code
+COPY dzo_tts.py .
+
+# Expose the port on which the Flask app will run
+EXPOSE 1214
+
+# Set the command to run the Flask app
+CMD ["python", "dzo_tts.py"]
