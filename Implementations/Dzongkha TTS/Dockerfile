@@ -1,19 +1,30 @@
-# Use the official Python image as the base image.
-FROM python:3.9-slim
+# Use Ubuntu as the base image
+FROM ubuntu:20.04
 
-# Set a working directory.
+# Update package lists and install necessary packages
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends \
+        python3 \
+        python3-pip \
+        openjdk-8-jre-headless \
+        software-properties-common \
+        gnupg \
+    && apt-key adv --keyserver keyserver.ubuntu.com --recv-keys EEA14886 \
+    && add-apt-repository ppa:openjdk-r/ppa \
+    && apt-get update \
+    && apt-get install -y --no-install-recommends \
+        openjdk-8-jre-headless \
+    && apt-get clean \
+    && rm -rf /var/lib/apt/lists/*
+
+# Set working directory
 WORKDIR /app
 
-# Copy the entire directory into the container.
-COPY . .
+# Install Python dependencies
+RUN pip install flask flask-cors pydub TTS
 
-# Install the required dependencies.
-RUN pip install TTS
-RUN pip install flask
-RUN pip install pathlib
+# Copy the TTS application files into the container
+COPY tts /app
 
-# Expose the API port.
-EXPOSE 1213
-
-# Start the Flask API.
-CMD ["python", "dzo_tts.py"]
+# Run the application
+CMD ["python3", "dzo_tts.py"]
