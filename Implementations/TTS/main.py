@@ -1,13 +1,23 @@
-from flask import Flask, request, send_file, jsonify
-from TTS.api import TTS
-from pathlib import Path
-from flask_cors import CORS
 import os
 import io
+from pathlib import Path
+from fastapi import FastAPI, HTTPException, UploadFile, File
+from fastapi.responses import StreamingResponse, JSONResponse
+from fastapi.middleware.cors import CORSMiddleware
+from pydantic import BaseModel
+from TTS.api import TTS
 from pydub import AudioSegment
 
-app = Flask(__name__)
-CORS(app)  # Enable CORS for all routes
+app = FastAPI()
+
+# Enable CORS for all routes
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 print('========== LOADING TTS MODEL ==========')
 tts = TTS(
@@ -16,6 +26,9 @@ tts = TTS(
     progress_bar=True, gpu=False
 )
 print('========== LOADED TTS MODEL ==========')
+
+class WylieRequest(BaseModel):
+    wylie_text: str
 
 def split_input_into_sentence(input_sen: str, limit=30):
     input_sen = input_sen.replace('/', '/ ')
@@ -73,13 +86,12 @@ def normalize_number(input_text):
         input_text = input_text.replace(dz, en)
     return input_text
 
-@app.route("/convert", methods=["POST"])
-def convert_wylie_to_audio():
+@app.post("/convert")
+async def convert_wylie_to_audio(request: WylieRequest):
     try:
-        # Get the Wylie text from the request body
-        dzo = request.json.get("wylie_text")
+        dzo = request.wylie_text
         if not dzo:
-            return jsonify({"error": "Missing 'wylie_text' in request body"}), 400
+            raise HTTPException(status_code=400, detail="Missing 'wylie_text' in request body")
 
         lines = dzo.split('\n')
         wylie_transcriptions = []
@@ -102,20 +114,11 @@ def convert_wylie_to_audio():
         # Generate audio data using the TTS synthesizer
         audio_data = predict_using_tts_api(full_wylie_text, 'output_audio_file')
 
-        # Write the audio data to a file
-        with output_audio_file.open('wb') as f:
-            f.write(audio_data)
+        return StreamingResponse(io.BytesIO(audio_data), media_type="audio/wav")
 
-        # Send the audio file as the response
-        response = send_file(output_audio_file, mimetype="audio/wav")
-
-        # Optionally clean up the audio file after sending
-        output_audio_file.unlink()
-
-        return response
     except Exception as e:
         print(f"Error during conversion: {e}")
-        return jsonify({"error": str(e)}), 500
+        raise HTTPException(status_code=500, detail=str(e))
 
 def convert_dzongkha_text_to_wylie(dzo_text):
     java_command = f'java CustomToWylie "{dzo_text}"'
@@ -124,4 +127,5 @@ def convert_dzongkha_text_to_wylie(dzo_text):
     return wyile_output
 
 if __name__ == "__main__":
-    app.run(host="0.0.0.0", port=1214)
+    import uvicorn
+    uvicorn.run(app, host="0.0.0.0", port=1214)
