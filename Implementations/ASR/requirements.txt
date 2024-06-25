@@ -1,0 +1,7 @@
+fastapi
+uvicorn
+transformers
+torch
+librosa==0.10.0  # or any version compatible with numpy<2.0.0
+numpy<2.0.0
+pyctcdecode
