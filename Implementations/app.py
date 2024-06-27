@@ -115,16 +115,21 @@ async def service3(request: Request, Authorize: AuthJWT = Depends()):
 async def convert_audio(request: Request, Authorize: AuthJWT = Depends()):
     Authorize.jwt_required()
     try:
-        audio_file = await request.body()
-        files = {"audio_file": ("audio.wav", audio_file, "audio/wav")}
+        form = await request.form()
+        audio_file = form["audio_file"]
 
+        # Prepare files for forwarding
+        files = {"audio_file": (audio_file.filename, audio_file.file, audio_file.content_type)}
+
+        # Forward the request to the ASR service
         async with httpx.AsyncClient() as client:
             response = await client.post(ASR_URL, files=files)
 
+        # Return the response if successful
         if response.status_code == 200:
             return response.json()
 
-        raise HTTPException(status_code=response.status_code, detail="Failed to get ASR response")
+        raise HTTPException(status_code=response.status_code, detail=f"Failed to get ASR response: {response.text}")
     except httpx.RequestError as e:
         logging.error(f"Error forwarding request to {ASR_URL}: {str(e)}")
         raise HTTPException(status_code=500, detail="Internal server error")
