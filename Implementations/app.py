@@ -38,7 +38,7 @@ class TranslationRequest(BaseModel):
     text: str
 
 class Settings(BaseModel):
-    authjwt_secret_key: str = "123456"  # Replace with your actual secret key
+    authjwt_secret_key: str = "d35bnRghYC_Ci3oc3MtJCqe0xcPbl_6zqCZ9GszF7rg"  # Replace with your actual secret key
 
 @AuthJWT.load_config
 def get_config():
