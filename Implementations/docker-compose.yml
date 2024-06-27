@@ -1,0 +1,53 @@
+version: "3.8"
+
+services:
+  dzo-to-eng:
+    image: dzo-eng:latest
+    deploy:
+      replicas: 3
+    ports:
+      - "1213:80"
+    environment:
+      - SERVICE_NAME=dzo-to-eng
+
+  eng-to-dzo:
+    image: eng-dzo:latest
+    deploy:
+      replicas: 3
+    ports:
+      - "1212:80"
+    environment:
+      - SERVICE_NAME=eng-to-dzo
+
+  tts:
+    image: tts:latest
+    deploy:
+      replicas: 3
+    ports:
+      - "1214:80"
+    environment:
+      - SERVICE_NAME=tts
+
+  asr:
+    image: asr:latest
+    deploy:
+      replicas: 3
+    ports:
+      - "1215:80"
+    environment:
+      - SERVICE_NAME=asr
+
+  gateway:
+    image: gateway:latest
+    ports:
+      - "1216:80"
+    depends_on:
+      - dzo-to-eng
+      - eng-to-dzo
+      - tts
+      - asr
+    environment:
+      - DZO_TO_ENG_URL=http://dzo-to-eng/translate
+      - ENG_TO_DZO_URL=http://eng-to-dzo/translate
+      - TTS_URL=http://tts/convert
+      - ASR_URL=http://asr/convert
