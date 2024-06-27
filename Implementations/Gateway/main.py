@@ -14,15 +14,19 @@ app = FastAPI()
 logging.basicConfig(level=logging.INFO)
 
 # Define URLs for microservices
-DZO_TO_ENG_URL = 'http://localhost:1213/translate'
-ENG_TO_DZO_URL = 'http://localhost:1212/translate'
-TTS_URL = 'http://localhost:1214/convert'
-ASR_URL = 'http://localhost:1215/convert'
+# DZO_TO_ENG_URL = 'http://localhost:1213/translate'
+# ENG_TO_DZO_URL = 'http://localhost:1212/translate'
+# TTS_URL = 'http://localhost:1214/convert'
+# ASR_URL = 'http://localhost:1215/convert'
+# Define URLs for microservices
+DZO_TO_ENG_URL = 'http://gateway-stack_dzo-to-eng:1213/translate'
+ENG_TO_DZO_URL = 'http://gateway-stack_eng-to-dzo:1212/translate'
+TTS_URL = 'http://gateway-stack_tts:1214/convert'
+ASR_URL = 'http://gateway-stack_asr:1215/convert'
 
 # CORS (Cross-Origin Resource Sharing) settings
 origins = [
     "*",  # Allow all origins (not recommended for production)
-    # Add more origins as needed
 ]
 
 # Add CORS middleware to allow specified origins
@@ -137,5 +141,4 @@ async def convert_audio(request: Request, Authorize: AuthJWT = Depends()):
 
 if __name__ == "__main__":
     import uvicorn
-
     uvicorn.run(app, host="0.0.0.0", port=1216)
