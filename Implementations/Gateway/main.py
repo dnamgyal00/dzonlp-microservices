@@ -6,7 +6,8 @@ from pydantic import BaseModel
 import httpx
 from fastapi_jwt_auth import AuthJWT
 from fastapi_jwt_auth.exceptions import AuthJWTException
-from fastapi.responses import JSONResponse
+from fastapi.responses import JSONResponse, StreamingResponse
+import io
 
 app = FastAPI()
 
@@ -103,13 +104,14 @@ async def service3(request: Request, Authorize: AuthJWT = Depends()):
         if not wylie_text:
             raise HTTPException(status_code=400, detail="Missing 'wylie_text' field in request body")
 
-        async with httpx.AsyncClient() as client:
+        async with httpx.AsyncClient(timeout=180) as client:  # Example timeout of 60 seconds
             response = await client.post(TTS_URL, json={"wylie_text": wylie_text})
 
         if response.status_code == 200:
-            return Response(content=response.content, media_type="audio/wav")
+            return StreamingResponse(io.BytesIO(response.content), media_type="audio/wav")
 
         raise HTTPException(status_code=response.status_code, detail="Failed to get TTS response")
+    
     except httpx.RequestError as e:
         logging.error(f"Error forwarding request to {TTS_URL}: {str(e)}")
         raise HTTPException(status_code=500, detail="Internal server error")
