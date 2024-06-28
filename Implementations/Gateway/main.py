@@ -53,35 +53,11 @@ def get_config():
 def authjwt_exception_handler(request: Request, exc: AuthJWTException):
     return JSONResponse(status_code=exc.status_code, content={"detail": exc.message})
 
-@app.post("/asr")
-async def convert_audio(request: Request, Authorize: AuthJWT = Depends()):
-    Authorize.jwt_required()
-    try:
-        form = await request.form()
-        audio_file = form["audio_file"]
-
-        # Prepare files for forwarding
-        files = {"audio_file": (audio_file.filename, audio_file.file, audio_file.content_type)}
-
-        # Forward the request to the ASR service
-        async with httpx.AsyncClient(timeout=180) as client:  # Example timeout of 180 seconds
-            response = await client.post(ASR_URL, files=files)
-
-        # Return the response if successful
-        if response.status_code == 200:
-            return response.json()
-
-        raise HTTPException(status_code=response.status_code, detail=f"Failed to get ASR response: {response.text}")
-    except httpx.RequestError as e:
-        logging.error(f"Error forwarding request to {ASR_URL}: {str(e)}")
-        raise HTTPException(status_code=500, detail="Internal server error")
-
-
 @app.post("/nmt/dzo-to-eng")
 async def translate_dzo_to_eng(request: TranslationRequest, Authorize: AuthJWT = Depends()):
     Authorize.jwt_required()
     try:
-        async with httpx.AsyncClient(timeout=180) as client:  # Example timeout of 180 seconds
+        async with httpx.AsyncClient() as client:
             response = await client.post(DZO_TO_ENG_URL, json={"text": request.text})
 
         # Check response status code
@@ -102,7 +78,7 @@ async def translate_dzo_to_eng(request: TranslationRequest, Authorize: AuthJWT =
 async def translate_eng_to_dzo(request: TranslationRequest, Authorize: AuthJWT = Depends()):
     Authorize.jwt_required()
     try:
-        async with httpx.AsyncClient(timeout=180) as client:  # Example timeout of 180 seconds
+        async with httpx.AsyncClient() as client:
             response = await client.post(ENG_TO_DZO_URL, json={"text": request.text})
 
         # Check response status code
@@ -117,6 +93,7 @@ async def translate_eng_to_dzo(request: TranslationRequest, Authorize: AuthJWT =
 
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Internal server error: {str(e)}")
+
 
 @app.post("/tts")
 async def service3(request: Request, Authorize: AuthJWT = Depends()):
@@ -138,6 +115,31 @@ async def service3(request: Request, Authorize: AuthJWT = Depends()):
     except httpx.RequestError as e:
         logging.error(f"Error forwarding request to {TTS_URL}: {str(e)}")
         raise HTTPException(status_code=500, detail="Internal server error")
+
+
+@app.post("/asr")
+async def convert_audio(request: Request, Authorize: AuthJWT = Depends()):
+    Authorize.jwt_required()
+    try:
+        form = await request.form()
+        audio_file = form["audio_file"]
+
+        # Prepare files for forwarding
+        files = {"audio_file": (audio_file.filename, audio_file.file, audio_file.content_type)}
+
+        # Forward the request to the ASR service
+        async with httpx.AsyncClient() as client:
+            response = await client.post(ASR_URL, files=files)
+
+        # Return the response if successful
+        if response.status_code == 200:
+            return response.json()
+
+        raise HTTPException(status_code=response.status_code, detail=f"Failed to get ASR response: {response.text}")
+    except httpx.RequestError as e:
+        logging.error(f"Error forwarding request to {ASR_URL}: {str(e)}")
+        raise HTTPException(status_code=500, detail="Internal server error")
+
 
 if __name__ == "__main__":
     import uvicorn
